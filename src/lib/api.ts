@@ -50,4 +50,33 @@ api.interceptors.response.use(
   },
 );
 
+export type ChallengeResponse = {
+  challenge: string;
+  expiresAt: string;
+};
+
+export type VerifyResponse = {
+  accessToken: string;
+  refreshToken?: string;
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    walletAddress: string;
+  };
+};
+
+export async function getAuthChallenge(address: string): Promise<ChallengeResponse> {
+  const res = await api.post<ChallengeResponse>("/auth/challenge", { address });
+  return res.data;
+}
+
+export async function verifyWalletSignature(
+  address: string,
+  signature: string,
+): Promise<VerifyResponse> {
+  const res = await api.post<VerifyResponse>("/auth/verify", { address, signature });
+  return res.data;
+}
+
 export default api;
