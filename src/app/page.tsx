@@ -1,49 +1,14 @@
+import HeroSection from '@/components/landing/HeroSection';
+import FeaturedCampaigns from '@/components/landing/FeaturedCampaigns';
 import Link from 'next/link';
 
 export default function Home() {
   return (
     <div className="bg-white">
-      {/* Hero Section */}
-      <div className="relative isolate px-6 pt-14 lg:px-8">
-        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
-          <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-blue-600 to-purple-600 opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" />
-        </div>
+      <HeroSection />
 
-        <div className="mx-auto max-w-2xl py-32 sm:py-48 lg:py-56">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-              Democratizing Fundraising with{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Blockchain
-              </span>
-            </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
-              Create, fund, and manage campaigns with complete transparency and trust. 
-              Built on Ethereum for a decentralized future of fundraising.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Link
-                href="/campaigns"
-                className="rounded-md bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-purple-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200 transform hover:scale-105"
-              >
-                Browse Campaigns
-              </Link>
-              <Link
-                href="/create"
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors duration-200"
-              >
-                Create Campaign <span aria-hidden="true">→</span>
-              </Link>
-            </div>
-          </div>
-        </div>
+      <FeaturedCampaigns />
 
-        <div className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]">
-          <div className="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-blue-600 to-purple-600 opacity-30 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" />
-        </div>
-      </div>
-
-      {/* Features Section */}
       <div className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
@@ -55,7 +20,7 @@ export default function Home() {
               Built with cutting-edge blockchain technology to ensure transparency, security, and global accessibility.
             </p>
           </div>
-          
+
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
             <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
               <div className="flex flex-col">
@@ -73,7 +38,7 @@ export default function Home() {
                   </p>
                 </dd>
               </div>
-              
+
               <div className="flex flex-col">
                 <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
                   <div className="h-10 w-10 bg-purple-600 rounded-lg flex items-center justify-center">
@@ -89,7 +54,7 @@ export default function Home() {
                   </p>
                 </dd>
               </div>
-              
+
               <div className="flex flex-col">
                 <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
                   <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center">
@@ -110,7 +75,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA Section */}
       <div className="bg-gray-900">
         <div className="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
@@ -118,7 +82,7 @@ export default function Home() {
               Ready to start your campaign?
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
-              Join thousands of creators who have successfully raised funds on Lumora. 
+              Join thousands of creators who have successfully raised funds on Lumora.
               Launch your campaign today and reach a global audience.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
