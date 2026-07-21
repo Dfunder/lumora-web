@@ -25,10 +25,65 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+export const resolveReauthQueue = (token: string) => {
+  isRefreshing = false;
+  processQueue(null, token);
+};
+
+export const rejectReauthQueue = (error: any = new Error("Re-authentication failed")) => {
+  isRefreshing = false;
+  processQueue(error, null);
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorResponse>) => {
-    if (typeof window !== "undefined" && !axios.isCancel(error)) {
+    const originalRequest = error.config as any;
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      // Trigger re-auth modal
+      useAuthStore.getState().setReauthModalOpen(true);
+      toast.error("Session expired. Please reconnect your wallet.", { id: "session-expired" });
+
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
+    }
+
+    if (typeof window !== "undefined" && !axios.isCancel(error) && error.response?.status !== 401) {
       const message =
         error.response?.data?.message ??
         error.response?.data?.error ??
