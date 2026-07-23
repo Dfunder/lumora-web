@@ -1,5 +1,6 @@
 import HeroSection from '@/components/landing/HeroSection';
 import FeaturedCampaigns from '@/components/landing/FeaturedCampaigns';
+import TrustAndHowItWorksSection from '@/components/landing/TrustAndHowItWorksSection';
 import Link from 'next/link';
 
 export default function Home() {
@@ -8,6 +9,8 @@ export default function Home() {
       <HeroSection />
 
       <FeaturedCampaigns />
+
+      <TrustAndHowItWorksSection />
 
       <div className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
