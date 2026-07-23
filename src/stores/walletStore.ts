@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useAuthStore, type AuthStatus } from "./authStore";
-import { getAuthChallenge, verifyWalletSignature } from "@/lib/api";
+import api, { getAuthChallenge, verifyWalletSignature } from "@/lib/api";
 
 export type WalletConnectionStep = "idle" | "connecting" | "connected" | "authenticating" | "done" | "error";
 
@@ -17,7 +17,7 @@ export interface WalletState {
   selectWallet: (walletId: string | null) => void;
   setWalletPanelOpen: (isOpen: boolean) => void;
   connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
+  disconnectWallet: () => Promise<void>;
   setConnectionState: (isConnected: boolean, address?: string, balance?: string) => void;
   resetWalletState: () => void;
 }
@@ -152,7 +152,12 @@ export const useWalletStore = create<WalletState>()(
           console.error('Failed to connect wallet:', error);
         }
       },
-      disconnectWallet: () => {
+      disconnectWallet: async () => {
+        try {
+          await api.post("/auth/logout");
+        } catch (error) {
+          console.error("Failed to logout from backend", error);
+        }
         useAuthStore.getState().clearAuth();
         set(
           {
@@ -167,6 +172,9 @@ export const useWalletStore = create<WalletState>()(
           false,
           "wallet/disconnectWallet"
         );
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
+        }
       },
       setConnectionState: (isConnected, address, balance) =>
         set(
