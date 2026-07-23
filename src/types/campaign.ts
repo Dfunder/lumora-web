@@ -2,12 +2,17 @@ export interface Campaign {
   id: string;
   title: string;
   description: string;
-  image: string;
-  goal: number;
-  raised: number;
+  coverImage: string;
+  goalAmount: number;
+  raisedAmount: number;
+  currency: string;
+  endDate: string;
   donorCount: number;
+  creatorAddress: string;
+  creatorName: string;
+  isVerified: boolean;
+  category: string;
   status: 'active' | 'completed' | 'draft';
-  creator: { name: string; address: string };
   createdAt: string;
 }
 
