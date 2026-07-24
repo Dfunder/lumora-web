@@ -2,12 +2,58 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWalletStore } from '@/stores/walletStore';
 
 export function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [xlmBalance, setXlmBalance] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isConnected && address) {
+      fetch(`https://horizon.stellar.org/accounts/${address}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            const native = data.balances?.find((b: any) => b.asset_type === 'native');
+            if (native) {
+              setXlmBalance(native.balance);
+            } else {
+              setXlmBalance('0');
+            }
+          } else {
+            setXlmBalance('0');
+          }
+        })
+        .catch(console.error);
+    } else {
+      setXlmBalance(null);
+    }
+  }, [isConnected, address]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getGradient = (addr: string) => {
+    if (!addr) return 'none';
+    let hash = 0;
+    for (let i = 0; i < addr.length; i++) {
+      hash = addr.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const c1 = `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
+    const c2 = `hsl(${Math.abs(hash * 2) % 360}, 70%, 60%)`;
+    return `linear-gradient(135deg, ${c1}, ${c2})`;
+  };
   const {
     isConnected,
     address,
@@ -68,16 +114,39 @@ export function Navbar() {
 
           <div className="hidden md:flex md:items-center">
             {isConnected ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={disconnectWallet}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center space-x-2 border border-gray-200 rounded-full px-2 py-1 bg-white hover:bg-gray-50 transition-colors duration-200"
                 >
-                  Disconnect
+                  <div 
+                    className="w-6 h-6 rounded-full" 
+                    style={{ background: getGradient(address || '') }} 
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {address?.slice(0, 4)}...{address?.slice(-4)}
+                  </span>
+                  <svg className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">XLM Balance</p>
+                      <p className="text-sm font-medium text-gray-900 mt-1">{xlmBalance ? `${parseFloat(xlmBalance).toLocaleString()} XLM` : 'Loading...'}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        disconnectWallet();
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium transition-colors"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <button
@@ -154,13 +223,27 @@ export function Navbar() {
 
           <div className="pt-4 pb-3 border-t border-gray-200">
             {isConnected ? (
-              <div className="flex items-center px-3 space-x-3">
-                <span className="text-sm text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
+              <div className="px-3 space-y-3">
+                <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
+                  <div 
+                    className="w-8 h-8 rounded-full" 
+                    style={{ background: getGradient(address || '') }} 
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {address?.slice(0, 4)}...{address?.slice(-4)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {xlmBalance ? `${parseFloat(xlmBalance).toLocaleString()} XLM` : 'Loading...'}
+                    </p>
+                  </div>
+                </div>
                 <button
-                  onClick={disconnectWallet}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    disconnectWallet();
+                  }}
+                  className="w-full flex justify-center items-center px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
                 >
                   Disconnect
                 </button>
