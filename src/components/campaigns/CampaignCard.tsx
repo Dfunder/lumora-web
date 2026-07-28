@@ -7,9 +7,10 @@ import type { Campaign } from '@/types/campaign';
 
 interface CampaignCardProps {
   campaign: Campaign;
+  searchQuery?: string;
 }
 
-export function CampaignCard({ campaign }: CampaignCardProps) {
+export function CampaignCard({ campaign, searchQuery = '' }: CampaignCardProps) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
   useEffect(() => {
@@ -23,6 +24,20 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
   const progress = campaign.goalAmount > 0
     ? Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100))
     : 0;
+
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={index} className="bg-yellow-200 text-gray-900 rounded-sm px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
 
   return (
     <Link
@@ -61,7 +76,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         {/* Title and Verification Badge */}
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">
-            {campaign.title}
+            {highlightText(campaign.title, searchQuery)}
           </h2>
           {campaign.isVerified && (
             <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
@@ -81,7 +96,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
 
         {/* Description */}
         <p className="mt-2 text-sm leading-6 text-gray-600 line-clamp-3">
-          {campaign.description}
+          {highlightText(campaign.description, searchQuery)}
         </p>
 
         {/* Progress Bar */}

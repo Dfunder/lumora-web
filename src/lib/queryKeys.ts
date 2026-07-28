@@ -8,7 +8,8 @@ export interface CampaignQueryFilters {
   status?: string;
   page?: number;
   limit?: number;
-  category?: string;
+  category?: string | string[];
+  sort?: string;
 }
 
 const authKey = ["auth"] as const;
