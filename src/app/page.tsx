@@ -1,5 +1,6 @@
 import HeroSection from '@/components/landing/HeroSection';
 import FeaturedCampaigns from '@/components/landing/FeaturedCampaigns';
+import TestimonialsAndNewsletterSection from '@/components/landing/TestimonialsAndNewsletterSection';
 import TrustAndHowItWorksSection from '@/components/landing/TrustAndHowItWorksSection';
 import Link from 'next/link';
 
@@ -9,6 +10,8 @@ export default function Home() {
       <HeroSection />
 
       <FeaturedCampaigns />
+
+      <TestimonialsAndNewsletterSection />
 
       <TrustAndHowItWorksSection />
 
