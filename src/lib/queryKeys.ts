@@ -27,8 +27,7 @@ export const queryKeys = {
     lists: () => [...walletKey, "list"] as const,
     list: (filters: WalletQueryFilters = {}) =>
       [...walletKey, "list", filters] as const,
-    detail: (walletId: string) =>
-      [...walletKey, "detail", walletId] as const,
+    detail: (walletId: string) => [...walletKey, "detail", walletId] as const,
   },
   campaigns: {
     all: campaignKey,

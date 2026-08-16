@@ -44,7 +44,9 @@ export const resolveReauthQueue = (token: string) => {
   processQueue(null, token);
 };
 
-export const rejectReauthQueue = (error: any = new Error("Re-authentication failed")) => {
+export const rejectReauthQueue = (
+  error: any = new Error("Re-authentication failed"),
+) => {
   isRefreshing = false;
   processQueue(error, null);
 };
@@ -54,7 +56,11 @@ api.interceptors.response.use(
   (error: AxiosError<ApiErrorResponse>) => {
     const originalRequest = error.config as any;
 
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -71,7 +77,9 @@ api.interceptors.response.use(
 
       // Trigger re-auth modal
       useAuthStore.getState().setReauthModalOpen(true);
-      toast.error("Session expired. Please reconnect your wallet.", { id: "session-expired" });
+      toast.error("Session expired. Please reconnect your wallet.", {
+        id: "session-expired",
+      });
 
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
@@ -83,7 +91,11 @@ api.interceptors.response.use(
         .catch((err) => Promise.reject(err));
     }
 
-    if (typeof window !== "undefined" && !axios.isCancel(error) && error.response?.status !== 401) {
+    if (
+      typeof window !== "undefined" &&
+      !axios.isCancel(error) &&
+      error.response?.status !== 401
+    ) {
       const message =
         error.response?.data?.message ??
         error.response?.data?.error ??
@@ -121,7 +133,9 @@ export type VerifyResponse = {
   };
 };
 
-export async function getAuthChallenge(address: string): Promise<ChallengeResponse> {
+export async function getAuthChallenge(
+  address: string,
+): Promise<ChallengeResponse> {
   const res = await api.post<ChallengeResponse>("/auth/challenge", { address });
   return res.data;
 }
@@ -130,7 +144,10 @@ export async function verifyWalletSignature(
   address: string,
   signature: string,
 ): Promise<VerifyResponse> {
-  const res = await api.post<VerifyResponse>("/auth/verify", { address, signature });
+  const res = await api.post<VerifyResponse>("/auth/verify", {
+    address,
+    signature,
+  });
   return res.data;
 }
 
