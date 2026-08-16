@@ -36,6 +36,10 @@ export const queryKeys = {
       [...campaignKey, "list", filters] as const,
     detail: (campaignId: string) =>
       [...campaignKey, "detail", campaignId] as const,
+    recommendations: (campaignId: string) =>
+      [...campaignKey, "recommendations", campaignId] as const,
+    shares: (campaignId: string) =>
+      [...campaignKey, "shares", campaignId] as const,
   },
   kyc: {
     all: kycKey,
