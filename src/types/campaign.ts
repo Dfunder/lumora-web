@@ -12,7 +12,7 @@ export interface Campaign {
   creatorName: string;
   isVerified: boolean;
   category: string;
-  status: 'active' | 'completed' | 'draft';
+  status: "active" | "completed" | "draft";
   createdAt: string;
 }
 
