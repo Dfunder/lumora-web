@@ -1,16 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import Link from "next/link";
+import { useState, useEffect } from "react";
 
-import type { Campaign } from '@/types/campaign';
+import type { Campaign } from "@/types/campaign";
+import { Progress } from "./Progress";
 
 interface CampaignCardProps {
   campaign: Campaign;
   searchQuery?: string;
 }
 
-export function CampaignCard({ campaign, searchQuery = '' }: CampaignCardProps) {
+export function CampaignCard({
+  campaign,
+  searchQuery = "",
+}: CampaignCardProps) {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
   useEffect(() => {
@@ -21,21 +25,20 @@ export function CampaignCard({ campaign, searchQuery = '' }: CampaignCardProps) 
     setDaysRemaining(diffDays);
   }, [campaign.endDate]);
 
-  const progress = campaign.goalAmount > 0
-    ? Math.min(100, Math.round((campaign.raisedAmount / campaign.goalAmount) * 100))
-    : 0;
-
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    const parts = text.split(new RegExp(`(${query})`, "gi"));
     return parts.map((part, index) =>
       part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={index} className="bg-yellow-200 text-gray-900 rounded-sm px-0.5">
+        <mark
+          key={index}
+          className="bg-yellow-200 text-gray-900 rounded-sm px-0.5"
+        >
           {part}
         </mark>
       ) : (
         part
-      )
+      ),
     );
   };
 
@@ -54,8 +57,18 @@ export function CampaignCard({ campaign, searchQuery = '' }: CampaignCardProps) 
           />
         ) : (
           <div className="flex h-full items-center justify-center text-blue-400">
-            <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z" />
+            <svg
+              className="h-12 w-12"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 7.5A2.5 2.5 0 015.5 5h13A2.5 2.5 0 0121 7.5v9A2.5 2.5 0 0118.5 19h-13A2.5 2.5 0 013 16.5v-9z"
+              />
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
             </svg>
           </div>
@@ -101,19 +114,11 @@ export function CampaignCard({ campaign, searchQuery = '' }: CampaignCardProps) 
 
         {/* Progress Bar */}
         <div className="mt-5">
-          <div className="mb-2 flex items-center justify-between text-sm text-gray-500">
-            <span>
-              {campaign.currency}
-              {campaign.raisedAmount.toLocaleString()} raised
-            </span>
-            <span>{progress}%</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-gray-200">
-            <div
-              className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          <Progress
+            raised={campaign.raisedAmount}
+            goal={campaign.goalAmount}
+            currency={campaign.currency}
+          />
         </div>
 
         {/* Footer */}
