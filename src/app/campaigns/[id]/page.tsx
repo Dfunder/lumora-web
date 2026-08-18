@@ -1,17 +1,63 @@
+import type { Metadata } from "next";
 import { Container } from "@/components/layout/Container";
 import { Progress } from "@/components/campaigns/Progress";
 import { Tabs } from "@/components/layout/Tabs";
 import Milestones from "@/components/campaigns/Milestones";
 import DonorsLeaderboard from "@/components/campaigns/DonorsLeaderboard";
+import { ShareButtons } from "@/components/campaigns/ShareButtons";
+import { RelatedCampaigns } from "@/components/campaigns/RelatedCampaigns";
 
-const CampaignDetailPage = () => {
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const title = `Example Campaign ${id ? `#${id}` : ""} | Lumora`;
+  const description =
+    "This is a description for an example campaign. We are raising funds for a great cause.";
+  const coverImage = "https://via.placeholder.com/1280x720";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: [
+        {
+          url: coverImage,
+          width: 1200,
+          height: 630,
+          alt: "Example Campaign",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [coverImage],
+    },
+  };
+}
+
+export default async function CampaignDetailPage({ params }: PageProps) {
+  const { id } = await params;
+
   const campaign = {
+    id: id || "example-campaign",
     title: "Example Campaign",
     description:
       "This is a description for an example campaign. We are raising funds for a great cause.",
     coverImage: "https://via.placeholder.com/1280x720",
     raised: 7500,
     goal: 10000,
+    category: "education",
+    shareCount: 12,
     about:
       "This is the about section of the campaign. It contains detailed information about the project and its goals.",
     milestones: [
@@ -19,20 +65,20 @@ const CampaignDetailPage = () => {
         title: "Milestone 1",
         description: "Description for milestone 1",
         targetAmount: 2500,
-        status: "Released",
+        status: "Released" as const,
         verificationLink: "https://stellar.expert",
       },
       {
         title: "Milestone 2",
         description: "Description for milestone 2",
         targetAmount: 5000,
-        status: "Unlocked",
+        status: "Unlocked" as const,
       },
       {
         title: "Milestone 3",
         description: "Description for milestone 3",
         targetAmount: 7500,
-        status: "Locked",
+        status: "Locked" as const,
       },
     ],
     donors: [
@@ -50,7 +96,6 @@ const CampaignDetailPage = () => {
         asset: "USD",
         timestamp: "2024-01-02",
       },
-      // Add more donors for pagination testing
       ...Array.from({ length: 25 }, (_, i) => ({
         rank: i + 3,
         wallet: `0x${(i + 3).toString().padStart(40, "0")}`,
@@ -112,18 +157,25 @@ const CampaignDetailPage = () => {
         </div>
         <div>
           <div className="sticky top-24 space-y-6">
-            <div className="p-6 border rounded-lg">
+            <div className="p-6 border rounded-lg bg-white shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Funding Progress</h2>
               <Progress raised={campaign.raised} goal={campaign.goal} />
             </div>
-            <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold">
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors">
               Donate Now
             </button>
+            <ShareButtons
+              campaignId={campaign.id}
+              title={campaign.title}
+              initialShareCount={campaign.shareCount}
+            />
           </div>
         </div>
       </div>
+      <RelatedCampaigns
+        campaignId={campaign.id}
+        category={campaign.category}
+      />
     </Container>
   );
-};
-
-export default CampaignDetailPage;
+}

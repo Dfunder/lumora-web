@@ -25,10 +25,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
+interface QueueItem {
+  resolve: (token: string | null) => void;
+  reject: (error: unknown) => void;
+}
 
-const processQueue = (error: any, token: string | null = null) => {
+let isRefreshing = false;
+let failedQueue: QueueItem[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -45,7 +50,7 @@ export const resolveReauthQueue = (token: string) => {
 };
 
 export const rejectReauthQueue = (
-  error: any = new Error("Re-authentication failed"),
+  error: unknown = new Error("Re-authentication failed"),
 ) => {
   isRefreshing = false;
   processQueue(error, null);
@@ -54,7 +59,9 @@ export const rejectReauthQueue = (
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorResponse>) => {
-    const originalRequest = error.config as any;
+    const originalRequest = error.config as
+      | (NonNullable<typeof error.config> & { _retry?: boolean })
+      | undefined;
 
     if (
       error.response?.status === 401 &&
@@ -149,6 +156,65 @@ export async function verifyWalletSignature(
     signature,
   });
   return res.data;
+}
+
+export async function getCampaignShares(campaignId: string): Promise<number> {
+  try {
+    const res = await api.get<{ shareCount?: number; shares?: number }>(
+      `/campaigns/${campaignId}/shares`,
+    );
+    return res.data?.shareCount ?? res.data?.shares ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function incrementCampaignShare(
+  campaignId: string,
+): Promise<{ shareCount: number }> {
+  try {
+    const res = await api.post<{ shareCount?: number; shares?: number }>(
+      `/campaigns/${campaignId}/share`,
+    );
+    const shareCount = res.data?.shareCount ?? res.data?.shares ?? 1;
+    return { shareCount };
+  } catch {
+    return { shareCount: 1 };
+  }
+}
+
+export async function getRelatedCampaigns(
+  campaignId: string,
+  category?: string,
+): Promise<Record<string, unknown>[]> {
+  try {
+    const res = await api.get(`/campaigns/${campaignId}/recommendations`);
+    return Array.isArray(res.data)
+      ? (res.data as Record<string, unknown>[])
+      : Array.isArray(res.data?.data)
+        ? (res.data.data as Record<string, unknown>[])
+        : [];
+  } catch {
+    try {
+      const fallbackRes = await api.get("/campaigns", {
+        params: {
+          category,
+          limit: 4,
+          status: "active",
+        },
+      });
+      const items = Array.isArray(fallbackRes.data)
+        ? (fallbackRes.data as Record<string, unknown>[])
+        : Array.isArray(fallbackRes.data?.data)
+          ? (fallbackRes.data.data as Record<string, unknown>[])
+          : [];
+      return items
+        .filter((item) => String(item.id) !== String(campaignId))
+        .slice(0, 3);
+    } catch {
+      return [];
+    }
+  }
 }
 
 export default api;
