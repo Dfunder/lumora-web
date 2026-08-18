@@ -14,6 +14,7 @@ export interface Campaign {
   category: string;
   status: "active" | "completed" | "draft";
   createdAt: string;
+  shareCount?: number;
 }
 
 export interface PlatformStats {

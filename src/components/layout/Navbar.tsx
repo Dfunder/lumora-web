@@ -11,6 +11,14 @@ export function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const {
+    isConnected,
+    address,
+    connectWallet,
+    disconnectWallet,
+    step,
+    walletError,
+  } = useWalletStore();
 
   useEffect(() => {
     if (isConnected && address) {
@@ -54,14 +62,6 @@ export function Navbar() {
     const c2 = `hsl(${Math.abs(hash * 2) % 360}, 70%, 60%)`;
     return `linear-gradient(135deg, ${c1}, ${c2})`;
   };
-  const {
-    isConnected,
-    address,
-    connectWallet,
-    disconnectWallet,
-    step,
-    walletError,
-  } = useWalletStore();
 
   const navigation = [
     { name: 'Home', href: '/' },
