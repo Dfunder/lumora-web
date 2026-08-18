@@ -4,6 +4,8 @@ import { Progress } from "@/components/campaigns/Progress";
 import { Tabs } from "@/components/layout/Tabs";
 import Milestones from "@/components/campaigns/Milestones";
 import DonorsLeaderboard from "@/components/campaigns/DonorsLeaderboard";
+import Updates from "@/components/campaigns/Updates";
+import ContractInfo from "@/components/campaigns/ContractInfo";
 import { ShareButtons } from "@/components/campaigns/ShareButtons";
 import { RelatedCampaigns } from "@/components/campaigns/RelatedCampaigns";
 
@@ -111,10 +113,48 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         timestamp: "2024-01-28",
       },
     ],
-    updates: [{ title: "Update 1", content: "This is the first update." }],
+    updates: [
+      {
+        title: "Prototype hardware arrived",
+        date: "2024-02-10",
+        content:
+          "We just received the first batch of prototype hardware from our manufacturer. **Initial testing looks great** — see the photos below.\n\n- Assembly time reduced by 30%\n- Passed initial stress testing\n- Next step: field testing with a small group of donors",
+        attachments: [
+          { url: "https://via.placeholder.com/200", alt: "Prototype photo 1" },
+          { url: "https://via.placeholder.com/200", alt: "Prototype photo 2" },
+        ],
+      },
+      {
+        title: "Campaign kickoff",
+        date: "2024-01-05",
+        content:
+          "Thank you all for the incredible support in our first week! We're off to a great start toward our funding goal.",
+      },
+    ],
     contractInfo: {
-      address: "0xabc...",
-      platform: "Ethereum",
+      address: "CBQHNAXSI55GX2GN6D67GK7BHVPSLJUGZQEU7WJ5LKR7RVHVFVSD62A",
+      network: "Testnet" as const,
+      milestones: [
+        { title: "Milestone 1", targetAmount: 2500, status: "Released" as const },
+        { title: "Milestone 2", targetAmount: 5000, status: "Unlocked" as const },
+        { title: "Milestone 3", targetAmount: 7500, status: "Locked" as const },
+      ],
+      transactions: [
+        {
+          hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+          type: "Escrow Deposit",
+          amount: 2500,
+          asset: "USDC",
+          timestamp: "2024-01-06",
+        },
+        {
+          hash: "f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5",
+          type: "Milestone Release",
+          amount: 2500,
+          asset: "USDC",
+          timestamp: "2024-02-12",
+        },
+      ],
     },
   };
 
@@ -128,8 +168,11 @@ export default async function CampaignDetailPage({ params }: PageProps) {
       label: "Donors",
       content: <DonorsLeaderboard donors={campaign.donors} />,
     },
-    { label: "Updates", content: <div>Updates content</div> },
-    { label: "Contract Info", content: <div>Contract Info content</div> },
+    { label: "Updates", content: <Updates updates={campaign.updates} /> },
+    {
+      label: "Contract Info",
+      content: <ContractInfo contractInfo={campaign.contractInfo} />,
+    },
   ];
 
   return (
