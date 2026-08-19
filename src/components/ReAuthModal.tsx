@@ -6,7 +6,7 @@ import { useWalletStore } from '@/stores/walletStore';
 import { resolveReauthQueue, rejectReauthQueue, getAuthChallenge, verifyWalletSignature } from '@/lib/api';
 
 export function ReAuthModal() {
-  const { isReauthModalOpen, setReauthModalOpen, setAuth, clearAuth } = useAuthStore();
+  const { isReauthModalOpen, closeReauthModal, setAuth, clearAuth } = useAuthStore();
   const { address } = useWalletStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export function ReAuthModal() {
         const account = accounts[0];
 
         if (address && account.toLowerCase() !== address.toLowerCase()) {
-           throw new Error(`Please re-authenticate with your previous wallet: ${address}`);
+           throw new Error('Please re-authenticate with the same wallet you used before.');
         }
 
         const { challenge } = await getAuthChallenge(account);
@@ -37,12 +37,12 @@ export function ReAuthModal() {
           refreshToken: result.refreshToken,
         });
 
-        setReauthModalOpen(false);
+        closeReauthModal();
         resolveReauthQueue(result.accessToken);
       } else {
         const demoAddress = '0x742d35Cc6434Bb0532C4457A88B95935F72C0770';
         if (address && demoAddress.toLowerCase() !== address.toLowerCase()) {
-           throw new Error(`Please re-authenticate with your previous wallet: ${address}`);
+           throw new Error('Please re-authenticate with the same wallet you used before.');
         }
         
         const { challenge } = await getAuthChallenge(demoAddress);
@@ -55,11 +55,13 @@ export function ReAuthModal() {
           refreshToken: result.refreshToken,
         });
 
-        setReauthModalOpen(false);
+        closeReauthModal();
         resolveReauthQueue(result.accessToken);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Re-authentication failed';
+      const message = err instanceof Error
+        ? err.message
+        : 'Re-authentication failed. Please try again.';
       setError(message);
     } finally {
       setIsLoading(false);
@@ -67,7 +69,7 @@ export function ReAuthModal() {
   };
 
   const handleCancel = () => {
-    setReauthModalOpen(false);
+    closeReauthModal();
     clearAuth();
     rejectReauthQueue(new Error('User cancelled re-authentication'));
   };

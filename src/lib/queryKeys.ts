@@ -13,6 +13,7 @@ export interface CampaignQueryFilters {
 }
 
 const authKey = ["auth"] as const;
+const sessionKey = ["session"] as const;
 const walletKey = ["wallets"] as const;
 const campaignKey = ["campaigns"] as const;
 const kycKey = ["kyc"] as const;
@@ -21,6 +22,11 @@ export const queryKeys = {
   auth: {
     all: authKey,
     currentUser: () => [...authKey, "current-user"] as const,
+  },
+  session: {
+    all: sessionKey,
+    current: () => [...sessionKey, "current"] as const,
+    refresh: () => [...sessionKey, "refresh"] as const,
   },
   wallets: {
     all: walletKey,

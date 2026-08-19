@@ -75,11 +75,12 @@ export function Navbar() {
     return pathname?.startsWith(href);
   };
 
-  const isLoading = step === 'connecting' || step === 'authenticating';
+  const isLoading = step === 'connecting' || step === 'authenticating' || step === 'error';
 
   const buttonLabel = () => {
     if (step === 'connecting') return 'Connecting...';
     if (step === 'authenticating') return 'Signing in...';
+    if (step === 'error') return 'Retry';
     return 'Connect Wallet';
   };
 
@@ -151,10 +152,10 @@ export function Navbar() {
             ) : (
               <button
                 onClick={connectWallet}
-                disabled={isLoading}
-                className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+                disabled={step === 'connecting' || step === 'authenticating'}
+                className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${(step === 'connecting' || step === 'authenticating') ? 'opacity-50 cursor-not-allowed transform-none' : ''} ${step === 'error' ? 'ring-2 ring-red-300' : ''}`}
               >
-                {isLoading && (
+                {(step === 'connecting' || step === 'authenticating') && (
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -219,9 +220,7 @@ export function Navbar() {
             >
               {item.name}
             </Link>
-          ))}
-
-          <div className="pt-4 pb-3 border-t border-gray-200">
+          ))}              <div className="pt-4 pb-3 border-t border-gray-200">
             {isConnected ? (
               <div className="px-3 space-y-3">
                 <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
@@ -252,13 +251,13 @@ export function Navbar() {
               <div className="px-3">
                 <button
                   onClick={connectWallet}
-                  disabled={isLoading}
+                  disabled={step === 'connecting' || step === 'authenticating'}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? buttonLabel() : 'Connect Wallet'}
+                  {(step === 'connecting' || step === 'authenticating') ? buttonLabel() : step === 'error' ? 'Retry' : 'Connect Wallet'}
                 </button>
                 {walletError && (
-                  <p className="mt-2 text-xs text-red-600 text-center">{walletError}</p>
+                  <p className="mt-2 text-xs text-red-600 text-center" role="alert">{walletError}</p>
                 )}
               </div>
             )}
