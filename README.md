@@ -24,6 +24,22 @@ React Query owns server state: API responses, loading and error status, caching,
 
 Zustand owns client UI state that must be shared between components, such as the authenticated session, selected wallet or campaign, panels, and filters. API response collections and other server-owned data should not be copied into Zustand; keeping them in both systems creates competing sources of truth and stale UI bugs.
 
+## Authentication architecture
+
+Wallet-based authentication follows a challenge → sign → verify flow managed by `walletStore`. Once verified the backend returns an access token and a refresh token. Both are persisted in `authStore` (via `localStorage`) so the session survives page reloads.
+
+### Refresh-token rotation
+
+On every successful `/auth/refresh` call the backend issues a **new** refresh token and invalidates the old one. The client tracks a sequence counter and a `previousToken` reference so that any reuse of an already-rotated token is immediately rejected and the user is forced to re-authenticate.
+
+### Session safety guarantees
+
+- **No partial auth** — if challenge, signature, or verification fails the wallet store rolls back to `idle` and clears the auth store so the user never lands in a half-logged-in state.
+- **Deduplicated re-auth** — concurrent 401 responses are queued; only one re-auth modal is shown and only one refresh request is made.
+- **Clean logout** — `clearAuth` marks the current refresh token as used (detecting reuse), removes persisted state, and clears the session cookie.
+- **Cross-tab consistency** — on mount `providers.tsx` checks the session cookie; if it has been removed by another tab the Zustand state is reset.
+- **User-friendly errors** — raw backend or wallet exceptions are mapped to short, actionable messages before being shown in the UI or toast notifications.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
