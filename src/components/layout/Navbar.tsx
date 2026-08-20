@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useWalletStore } from '@/stores/walletStore';
+import { useAuthStore } from '@/stores/authStore';
+import { walletErrorSourceLabel } from '@/lib/walletErrors';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -12,13 +14,20 @@ export function Navbar() {
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
-    isConnected,
-    address,
+    address: walletAddress,
     connectWallet,
     disconnectWallet,
     step,
     walletError,
+    walletErrorSource,
+    isDemoSession,
   } = useWalletStore();
+  // The authenticated session is the source of truth for "connected" so the
+  // navbar stays consistent with the real auth state — including after a page
+  // refresh, where the wallet store resets but the auth session is restored.
+  const { isAuthenticated, user } = useAuthStore();
+  const isConnected = isAuthenticated;
+  const address = walletAddress ?? user?.walletAddress ?? null;
 
   useEffect(() => {
     if (isConnected && address) {
@@ -75,8 +84,6 @@ export function Navbar() {
     return pathname?.startsWith(href);
   };
 
-  const isLoading = step === 'connecting' || step === 'authenticating' || step === 'error';
-
   const buttonLabel = () => {
     if (step === 'connecting') return 'Connecting...';
     if (step === 'authenticating') return 'Signing in...';
@@ -127,6 +134,11 @@ export function Navbar() {
                   <span className="text-sm font-medium text-gray-700">
                     {address?.slice(0, 4)}...{address?.slice(-4)}
                   </span>
+                  {isDemoSession && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">
+                      Demo
+                    </span>
+                  )}
                   <svg className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -150,19 +162,29 @@ export function Navbar() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={connectWallet}
-                disabled={step === 'connecting' || step === 'authenticating'}
-                className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${(step === 'connecting' || step === 'authenticating') ? 'opacity-50 cursor-not-allowed transform-none' : ''} ${step === 'error' ? 'ring-2 ring-red-300' : ''}`}
-              >
-                {(step === 'connecting' || step === 'authenticating') && (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={() => connectWallet()}
+                  disabled={step === 'connecting' || step === 'authenticating'}
+                  className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${(step === 'connecting' || step === 'authenticating') ? 'opacity-50 cursor-not-allowed transform-none' : ''} ${step === 'error' ? 'ring-2 ring-red-300' : ''}`}
+                >
+                  {(step === 'connecting' || step === 'authenticating') && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {buttonLabel()}
+                </button>
+                {walletError && (
+                  <p className="mt-2 max-w-xs text-right text-xs text-red-600" role="alert">
+                    {walletErrorSource && (
+                      <span className="font-semibold">{walletErrorSourceLabel(walletErrorSource)}: </span>
+                    )}
+                    {walletError}
+                  </p>
                 )}
-                {buttonLabel()}
-              </button>
+              </div>
             )}
           </div>
 
@@ -231,6 +253,11 @@ export function Navbar() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">
                       {address?.slice(0, 4)}...{address?.slice(-4)}
+                      {isDemoSession && (
+                        <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 rounded px-1.5 py-0.5">
+                          Demo
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {xlmBalance ? `${parseFloat(xlmBalance).toLocaleString()} XLM` : 'Loading...'}
@@ -250,14 +277,19 @@ export function Navbar() {
             ) : (
               <div className="px-3">
                 <button
-                  onClick={connectWallet}
+                  onClick={() => connectWallet()}
                   disabled={step === 'connecting' || step === 'authenticating'}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {(step === 'connecting' || step === 'authenticating') ? buttonLabel() : step === 'error' ? 'Retry' : 'Connect Wallet'}
                 </button>
                 {walletError && (
-                  <p className="mt-2 text-xs text-red-600 text-center" role="alert">{walletError}</p>
+                  <p className="mt-2 text-xs text-red-600 text-center" role="alert">
+                    {walletErrorSource && (
+                      <span className="font-semibold">{walletErrorSourceLabel(walletErrorSource)}: </span>
+                    )}
+                    {walletError}
+                  </p>
                 )}
               </div>
             )}

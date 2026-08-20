@@ -2,6 +2,14 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useAuthStore, type AuthStatus } from "./authStore";
 import api, { getAuthChallenge, verifyWalletSignature } from "@/lib/api";
+import {
+  buildDemoSignature,
+  classifyWalletError,
+  DEMO_WALLET_ADDRESS,
+  isDemoWalletEnabled,
+  NO_WALLET_DETECTED,
+  type WalletErrorSource,
+} from "@/lib/walletErrors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,11 +31,19 @@ export interface WalletState {
   balance: string | null;
   step: WalletConnectionStep;
   walletError: string | null;
+  /** Which layer the last error came from (browser / wallet / backend). */
+  walletErrorSource: WalletErrorSource | null;
+  /** True while the active session came from the development-only demo path. */
+  isDemoSession: boolean;
   authStatus: AuthStatus;
 
   selectWallet: (walletId: string | null) => void;
   setWalletPanelOpen: (isOpen: boolean) => void;
-  connectWallet: () => Promise<void>;
+  /**
+   * Connect a wallet. Pass `{ demo: true }` to explicitly request the
+   * development-only demo login (only honoured when demo mode is enabled).
+   */
+  connectWallet: (options?: { demo?: boolean }) => Promise<void>;
   disconnectWallet: () => Promise<void>;
   setConnectionState: (
     isConnected: boolean,
@@ -45,6 +61,8 @@ const initialWalletState: {
   balance: null;
   step: WalletConnectionStep;
   walletError: null;
+  walletErrorSource: null;
+  isDemoSession: false;
   authStatus: AuthStatus;
 } = {
   selectedWalletId: null,
@@ -54,33 +72,10 @@ const initialWalletState: {
   balance: null,
   step: "idle",
   walletError: null,
+  walletErrorSource: null,
+  isDemoSession: false,
   authStatus: "idle",
 };
-
-// Friendly labels for wallet connection errors.
-function walletFriendlyError(error: unknown): string {
-  if (typeof error === "string") return error;
-  if (error instanceof Error) {
-    const msg = error.message;
-    if (msg.includes("No accounts found")) {
-      return "No wallet accounts found. Please unlock your wallet and try again.";
-    }
-    if (msg.includes("User rejected")) {
-      return "Connection was rejected. Please approve the request in your wallet.";
-    }
-    if (msg.includes("Signature verification failed")) {
-      return "Signature verification failed. Please try connecting your wallet again.";
-    }
-    if (msg.includes("Could not start wallet")) {
-      return "Could not reach the server. Please check your connection and try again.";
-    }
-    if (msg.includes("Could not verify your wallet")) {
-      return "Could not verify your wallet. Please try again.";
-    }
-    return "Failed to connect wallet. Please try again.";
-  }
-  return "An unexpected error occurred. Please try again.";
-}
 
 // ---------------------------------------------------------------------------
 // Store
@@ -97,7 +92,7 @@ export const useWalletStore = create<WalletState>()(
       setWalletPanelOpen: (isWalletPanelOpen) =>
         set({ isWalletPanelOpen }, false, "wallet/setWalletPanelOpen"),
 
-      connectWallet: async () => {
+      connectWallet: async (options) => {
         const authStore = useAuthStore.getState();
 
         // Prevent duplicate connect attempts.
@@ -106,18 +101,24 @@ export const useWalletStore = create<WalletState>()(
           return;
         }
 
+        const wantDemo = options?.demo === true;
+        const hasInjectedWallet =
+          typeof window !== "undefined" && !!window.ethereum;
+
         try {
           set(
             {
               step: "connecting",
               walletError: null,
+              walletErrorSource: null,
             },
             false,
             "wallet/connectWallet/start",
           );
 
           // -- MetaMask / injected wallet path --
-          if (typeof window !== "undefined" && window.ethereum) {
+          // Used only for a real wallet and when the demo path wasn't requested.
+          if (!wantDemo && hasInjectedWallet && window.ethereum) {
             let accounts: string[];
             try {
               accounts = (await window.ethereum.request({
@@ -212,14 +213,24 @@ export const useWalletStore = create<WalletState>()(
                 step: "done",
                 authStatus: "authenticated",
                 walletError: null,
+                walletErrorSource: null,
+                isDemoSession: false,
               },
               false,
               "wallet/connectWallet/done",
             );
           } else {
-            // -- Demo / no-wallet path --
-            const demoAddress =
-              "0x742d35Cc6434Bb0532C4457A88B95935F72C0770";
+            // -- No injected wallet (or demo explicitly requested) --
+            //
+            // The demo login fabricates a signature instead of using a real
+            // wallet, so it is strictly a development-only convenience. Outside
+            // of an opted-in dev build we refuse rather than silently signing the
+            // user in with a fake wallet — surfacing a clear browser-level error.
+            if (!isDemoWalletEnabled()) {
+              throw new Error(NO_WALLET_DETECTED);
+            }
+
+            const demoAddress = DEMO_WALLET_ADDRESS;
 
             authStore.setStatus("challenging");
             set(
@@ -237,7 +248,7 @@ export const useWalletStore = create<WalletState>()(
               "wallet/connectWallet/demo/signing",
             );
 
-            const signature = `0x${btoa(challenge)}`;
+            const signature = buildDemoSignature(challenge);
 
             authStore.setStatus("verifying");
             set(
@@ -263,21 +274,26 @@ export const useWalletStore = create<WalletState>()(
                 step: "done",
                 authStatus: "authenticated",
                 walletError: null,
+                walletErrorSource: null,
+                isDemoSession: true,
               },
               false,
               "wallet/connectWallet/demo/done",
             );
           }
         } catch (error) {
-          const message = walletFriendlyError(error);
+          const { source, message } = classifyWalletError(error);
 
-          // Roll back to a clean idle state — never leave partial auth.
+          // Roll back to a clean idle state — never leave partial auth or a
+          // stale address/balance behind. The user can retry immediately from
+          // the error state without reloading the page.
           authStore.clearAuth();
           set(
             {
               ...initialWalletState,
               step: "error",
               walletError: message,
+              walletErrorSource: source,
               authStatus: "error",
             },
             false,
@@ -294,14 +310,10 @@ export const useWalletStore = create<WalletState>()(
           console.error("Failed to logout from backend", error);
         }
         useAuthStore.getState().clearAuth();
-        set(
-          { ...initialWalletState },
-          false,
-          "wallet/disconnectWallet",
-        );
-        if (typeof window !== "undefined") {
-          window.location.href = "/";
-        }
+        // Reset in place — the UI reacts to store state, so there is no need to
+        // force a full-page reload. This clears the address, balance and any
+        // demo-session flag so no stale wallet data lingers after disconnect.
+        set({ ...initialWalletState }, false, "wallet/disconnectWallet");
       },
 
       setConnectionState: (isConnected, address, balance) =>

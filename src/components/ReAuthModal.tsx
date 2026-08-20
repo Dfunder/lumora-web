@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useWalletStore } from '@/stores/walletStore';
 import { resolveReauthQueue, rejectReauthQueue, getAuthChallenge, verifyWalletSignature } from '@/lib/api';
+import {
+  buildDemoSignature,
+  classifyWalletError,
+  DEMO_WALLET_ADDRESS,
+  isDemoWalletEnabled,
+  NO_WALLET_DETECTED,
+} from '@/lib/walletErrors';
 
 export function ReAuthModal() {
   const { isReauthModalOpen, closeReauthModal, setAuth, clearAuth } = useAuthStore();
@@ -40,13 +47,20 @@ export function ReAuthModal() {
         closeReauthModal();
         resolveReauthQueue(result.accessToken);
       } else {
-        const demoAddress = '0x742d35Cc6434Bb0532C4457A88B95935F72C0770';
+        // No injected wallet. Re-authenticating with the fabricated demo
+        // signature is a development-only path and must never stand in for a
+        // real wallet in production.
+        if (!isDemoWalletEnabled()) {
+          throw new Error(NO_WALLET_DETECTED);
+        }
+
+        const demoAddress = DEMO_WALLET_ADDRESS;
         if (address && demoAddress.toLowerCase() !== address.toLowerCase()) {
            throw new Error('Please re-authenticate with the same wallet you used before.');
         }
-        
+
         const { challenge } = await getAuthChallenge(demoAddress);
-        const signature = `0x${btoa(challenge)}`;
+        const signature = buildDemoSignature(challenge);
         const result = await verifyWalletSignature(demoAddress, signature);
         
         setAuth({
@@ -59,10 +73,8 @@ export function ReAuthModal() {
         resolveReauthQueue(result.accessToken);
       }
     } catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : 'Re-authentication failed. Please try again.';
-      setError(message);
+      // Surface a clear, source-aware message (browser / wallet / backend).
+      setError(classifyWalletError(err).message);
     } finally {
       setIsLoading(false);
     }
