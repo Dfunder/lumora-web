@@ -4,14 +4,18 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useWalletStore } from '@/stores/walletStore';
+import { isDemoWalletEnabled, walletErrorSourceLabel } from '@/lib/walletErrors';
 import Link from 'next/link';
 
 function ConnectPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuthStore();
-  const { connectWallet, step, walletError } = useWalletStore();
+  const { connectWallet, step, walletError, walletErrorSource } = useWalletStore();
   const isLoading = step === 'connecting' || step === 'authenticating';
+  // Demo login is a development-only convenience; the button is hidden unless it
+  // is explicitly enabled, so it can never be mistaken for a real wallet login.
+  const demoEnabled = isDemoWalletEnabled();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -47,7 +51,7 @@ function ConnectPageContent() {
           <div className="space-y-6">
             <div>
               <button
-                onClick={connectWallet}
+                onClick={() => connectWallet()}
                 disabled={isLoading}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all transform hover:scale-[1.02]"
               >
@@ -65,15 +69,20 @@ function ConnectPageContent() {
               </button>
             </div>
 
-            <div>
-              <button
-                onClick={connectWallet}
-                disabled={isLoading}
-                className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-              >
-                Connect Demo Wallet
-              </button>
-            </div>
+            {demoEnabled && (
+              <div>
+                <button
+                  onClick={() => connectWallet({ demo: true })}
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
+                >
+                  Connect Demo Wallet
+                </button>
+                <p className="mt-1 text-center text-xs text-amber-700">
+                  Development only — signs in a demo account, not a real wallet.
+                </p>
+              </div>
+            )}
 
             {walletError && (
               <div className="rounded-md bg-red-50 p-4 mt-4 border border-red-200">
@@ -84,7 +93,9 @@ function ConnectPageContent() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">Connection Failed</h3>
+                    <h3 className="text-sm font-medium text-red-800">
+                      Connection Failed{walletErrorSource ? ` · ${walletErrorSourceLabel(walletErrorSource)}` : ''}
+                    </h3>
                     <div className="mt-2 text-sm text-red-700">
                       <p>{walletError}</p>
                     </div>
