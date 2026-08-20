@@ -99,7 +99,7 @@ describe('normalizeCampaign', () => {
   it('handles a completely null or undefined input', () => {
     expect(normalizeCampaign(null).id).toBe('');
     expect(normalizeCampaign(undefined).id).toBe('');
-    expect(normalizeCampaign('not-an-object' as unknown).id).toBe('');
+    expect(normalizeCampaign('not-an-object' as unknown as Record<string, unknown>).id).toBe('');
   });
 
   it('handles string-typed booleans and numbers', () => {
@@ -133,7 +133,7 @@ describe('normalizeCampaigns', () => {
   it('returns an empty array for non-array input', () => {
     expect(normalizeCampaigns(null)).toEqual([]);
     expect(normalizeCampaigns(undefined)).toEqual([]);
-    expect(normalizeCampaigns('oops' as unknown)).toEqual([]);
+    expect(normalizeCampaigns('oops' as unknown as unknown[])).toEqual([]);
   });
 
   it('filters out entries without an id', () => {
