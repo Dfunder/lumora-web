@@ -5,28 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { CampaignCard, CampaignCardSkeleton } from '@/components/campaigns/CampaignCard';
-import type { Campaign } from '@/types/campaign';
-
-// Helper to map API campaign data to our type
-function mapApiCampaignToType(apiCampaign: any): Campaign {
-  return {
-    id: apiCampaign.id,
-    title: apiCampaign.title,
-    description: apiCampaign.description,
-    coverImage: apiCampaign.coverImage || apiCampaign.image,
-    goalAmount: apiCampaign.goalAmount || apiCampaign.goal,
-    raisedAmount: apiCampaign.raisedAmount || apiCampaign.raised,
-    currency: apiCampaign.currency || '$',
-    endDate: apiCampaign.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    donorCount: apiCampaign.donorCount,
-    creatorAddress: apiCampaign.creatorAddress || apiCampaign.creator?.address || '',
-    creatorName: apiCampaign.creatorName || apiCampaign.creator?.name || '',
-    isVerified: apiCampaign.isVerified || false,
-    category: apiCampaign.category || 'general',
-    status: apiCampaign.status,
-    createdAt: apiCampaign.createdAt,
-  };
-}
+import { normalizeCampaigns } from '@/lib/campaigns';
 
 export default function FeaturedCampaigns() {
   const { data, isLoading } = useQuery({
@@ -35,9 +14,7 @@ export default function FeaturedCampaigns() {
       const res = await api.get('/campaigns', {
         params: { limit: 6, status: 'active' },
       });
-      const apiCampaigns = res.data.data as any[];
-      const mappedCampaigns = apiCampaigns.map(mapApiCampaignToType);
-      return { data: mappedCampaigns, total: res.data.total };
+      return { data: normalizeCampaigns(res.data.data), total: res.data.total };
     },
     retry: 1,
     staleTime: 30_000,
