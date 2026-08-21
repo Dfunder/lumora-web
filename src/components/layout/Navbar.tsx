@@ -75,7 +75,7 @@ export function Navbar() {
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Campaigns', href: '/campaigns' },
-    { name: 'Create', href: '/create' },
+    { name: 'Create Campaign', href: '/create-campaign/basic' },
     { name: 'About', href: '/about' },
   ];
 
