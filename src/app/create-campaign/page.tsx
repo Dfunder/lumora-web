@@ -5,7 +5,7 @@ import { useCampaignStore } from "@/stores/campaignStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { useState } from "react";
 import { toast } from "sonner";
-import CampaignCard from "@/components/campaigns/CampaignCard";
+import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import type { Campaign } from "@/types/campaign";
 
 // Define the steps in the campaign creation flow with their names and paths
@@ -45,14 +45,14 @@ export default function ReviewAndDeployPage() {
     goalAmount: creationData.goalAmount || 0,
     raisedAmount: 0,
     currency: currency,
-    endDate: creationData.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: creationData.endDate || "2026-09-21T12:00:00.000Z",
     donorCount: 0,
     creatorAddress: address || "0x0000000000000000000000000000000000000000",
     creatorName: creationData.creatorName || "Anonymous Creator",
     isVerified: false,
     category: creationData.category || "general",
     status: "active",
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-08-21T12:00:00.000Z",
   };
 
   // Handle terms checkbox change
@@ -114,7 +114,7 @@ export default function ReviewAndDeployPage() {
   };
 
   // Check if all required fields are filled
-  const isFormComplete = creationData.title && creationData.description && creationData.goalAmount > 0 && termsAccepted;
+  const isFormComplete = creationData.title && creationData.description && (creationData.goalAmount ?? 0) > 0 && termsAccepted;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
