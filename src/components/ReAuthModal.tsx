@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { useWalletStore } from '@/stores/walletStore';
-import { resolveReauthQueue, rejectReauthQueue, getAuthChallenge, verifyWalletSignature } from '@/lib/api';
 import {
-  buildDemoSignature,
+  authenticateWithWallet,
+  useWalletSession,
+  type WalletAuthMode,
+} from '@/stores/walletStore';
+import { resolveReauthQueue, rejectReauthQueue } from '@/lib/api';
+import {
   classifyWalletError,
   DEMO_WALLET_ADDRESS,
   isDemoWalletEnabled,
@@ -13,8 +16,10 @@ import {
 } from '@/lib/walletErrors';
 
 export function ReAuthModal() {
-  const { isReauthModalOpen, closeReauthModal, setAuth, clearAuth } = useAuthStore();
-  const { address } = useWalletStore();
+  const { isReauthModalOpen, closeReauthModal, setAuth, resetAuth } = useAuthStore();
+  // The session address falls back to the restored auth session's wallet
+  // address, so the same-wallet check works even after a page reload.
+  const { address } = useWalletSession();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,30 +27,13 @@ export function ReAuthModal() {
     setIsLoading(true);
     setError(null);
     try {
+      let mode: WalletAuthMode;
+      let account: string;
+
       if (typeof window !== 'undefined' && window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const account = accounts[0];
-
-        if (address && account.toLowerCase() !== address.toLowerCase()) {
-           throw new Error('Please re-authenticate with the same wallet you used before.');
-        }
-
-        const { challenge } = await getAuthChallenge(account);
-        const signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [challenge, account],
-        });
-
-        const result = await verifyWalletSignature(account, signature);
-        
-        setAuth({
-          user: result.user,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-        });
-
-        closeReauthModal();
-        resolveReauthQueue(result.accessToken);
+        const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
+        account = accounts[0];
+        mode = 'injected';
       } else {
         // No injected wallet. Re-authenticating with the fabricated demo
         // signature is a development-only path and must never stand in for a
@@ -53,25 +41,25 @@ export function ReAuthModal() {
         if (!isDemoWalletEnabled()) {
           throw new Error(NO_WALLET_DETECTED);
         }
-
-        const demoAddress = DEMO_WALLET_ADDRESS;
-        if (address && demoAddress.toLowerCase() !== address.toLowerCase()) {
-           throw new Error('Please re-authenticate with the same wallet you used before.');
-        }
-
-        const { challenge } = await getAuthChallenge(demoAddress);
-        const signature = buildDemoSignature(challenge);
-        const result = await verifyWalletSignature(demoAddress, signature);
-        
-        setAuth({
-          user: result.user,
-          accessToken: result.accessToken,
-          refreshToken: result.refreshToken,
-        });
-
-        closeReauthModal();
-        resolveReauthQueue(result.accessToken);
+        account = DEMO_WALLET_ADDRESS;
+        mode = 'demo';
       }
+
+      if (address && account.toLowerCase() !== address.toLowerCase()) {
+        throw new Error('Please re-authenticate with the same wallet you used before.');
+      }
+
+      // Shared challenge → sign → verify sequence (same as the connect flow).
+      const result = await authenticateWithWallet(account, mode);
+
+      setAuth({
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+
+      closeReauthModal();
+      resolveReauthQueue(result.accessToken);
     } catch (err) {
       // Surface a clear, source-aware message (browser / wallet / backend).
       setError(classifyWalletError(err).message);
@@ -82,7 +70,7 @@ export function ReAuthModal() {
 
   const handleCancel = () => {
     closeReauthModal();
-    clearAuth();
+    resetAuth();
     rejectReauthQueue(new Error('User cancelled re-authentication'));
   };
 

@@ -2,13 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useCampaignStore } from "@/stores/campaignStore";
-import { useWalletStore } from "@/stores/walletStore";
+import { useWalletSession } from "@/stores/walletStore";
 import { useState } from "react";
 import { toast } from "sonner";
-import CampaignCard from "@/components/campaigns/CampaignCard";
+import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import type { Campaign } from "@/types/campaign";
 
 // Define the steps in the campaign creation flow with their names and paths
+// Stable fallback end date for the donor-facing preview (computed once at
+// module scope so rendering stays pure).
+const DEFAULT_END_DATE = new Date(
+  Date.now() + 30 * 24 * 60 * 60 * 1000,
+).toISOString();
+
 const CREATION_STEPS = [
   { id: 1, name: "Basic Information", path: "/create-campaign/basic" },
   { id: 2, name: "Campaign Details", path: "/create-campaign/details" },
@@ -24,10 +30,9 @@ export default function ReviewAndDeployPage() {
     setDeploymentStatus, 
     deploymentStatus, 
     deploymentError,
-    deployedCampaignId,
     setCreationStep
   } = useCampaignStore();
-  const { address, isConnected } = useWalletStore();
+  const { address, isConnected } = useWalletSession();
   
   const [showPreview, setShowPreview] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -45,7 +50,7 @@ export default function ReviewAndDeployPage() {
     goalAmount: creationData.goalAmount || 0,
     raisedAmount: 0,
     currency: currency,
-    endDate: creationData.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    endDate: creationData.endDate || DEFAULT_END_DATE,
     donorCount: 0,
     creatorAddress: address || "0x0000000000000000000000000000000000000000",
     creatorName: creationData.creatorName || "Anonymous Creator",
@@ -114,7 +119,7 @@ export default function ReviewAndDeployPage() {
   };
 
   // Check if all required fields are filled
-  const isFormComplete = creationData.title && creationData.description && creationData.goalAmount > 0 && termsAccepted;
+  const isFormComplete = creationData.title && creationData.description && (creationData.goalAmount ?? 0) > 0 && termsAccepted;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">

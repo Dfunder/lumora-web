@@ -1,3 +1,5 @@
+import type { CampaignSort } from "@/lib/campaignFilters";
+
 export interface WalletQueryFilters {
   ownerId?: string;
   currency?: string;
@@ -9,7 +11,7 @@ export interface CampaignQueryFilters {
   page?: number;
   limit?: number;
   category?: string | string[];
-  sort?: string;
+  sort?: CampaignSort;
 }
 
 const authKey = ["auth"] as const;
