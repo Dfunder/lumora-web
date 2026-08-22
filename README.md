@@ -36,7 +36,7 @@ On every successful `/auth/refresh` call the backend issues a **new** refresh to
 
 - **No partial auth** — if challenge, signature, or verification fails the wallet store rolls back to `idle` and clears the auth store so the user never lands in a half-logged-in state.
 - **Deduplicated re-auth** — concurrent 401 responses are queued; only one re-auth modal is shown and only one refresh request is made.
-- **Clean logout** — `clearAuth` marks the current refresh token as used (detecting reuse), removes persisted state, and clears the session cookie.
+- **Clean logout** — `resetAuth` marks the current refresh token as used (detecting reuse), removes persisted state, and clears the session cookie.
 - **Cross-tab consistency** — on mount `providers.tsx` checks the session cookie; if it has been removed by another tab the Zustand state is reset.
 - **User-friendly errors** — raw backend or wallet exceptions are mapped to short, actionable messages before being shown in the UI or toast notifications.
 - **In-place recovery** — connect errors and disconnect reset the wallet store in place (no forced page reload), clearing the address, balance and any demo flag so no stale wallet data lingers. Users can retry a failed or interrupted connection directly from the error state.

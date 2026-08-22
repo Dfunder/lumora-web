@@ -54,7 +54,8 @@ export interface AuthState {
   closeReauthModal: () => void;
   /** Rotate the refresh token (called after a successful /auth/refresh). */
   rotateRefreshToken: (newRefreshToken: string) => void;
-  clearAuth: () => void;
+  /** Log out: drop the session, persisted storage, cookie and any refresh token. */
+  resetAuth: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,7 +240,7 @@ export const useAuthStore = create<AuthState>()(
           set({ refreshToken: newRefreshToken }, false, "auth/rotateRefreshToken");
         },
 
-        clearAuth: () => {
+        resetAuth: () => {
           // Invalidate any outstanding refresh token so reuse is detectable.
           if (refreshMeta) {
             refreshMeta.previousToken = refreshMeta.token;
@@ -258,7 +259,7 @@ export const useAuthStore = create<AuthState>()(
               isReauthModalOpen: false,
             },
             false,
-            "auth/clearAuth",
+            "auth/resetAuth",
           );
         },
       };

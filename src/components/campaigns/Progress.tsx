@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 type ProgressProps = {
   raised: number;
   goal: number;
@@ -9,12 +7,8 @@ type ProgressProps = {
 };
 
 export const Progress = ({ raised, goal, currency = "ETH" }: ProgressProps) => {
-  const [percentage, setPercentage] = useState(0);
-
-  useEffect(() => {
-    const calculatedPercentage = goal > 0 ? (raised / goal) * 100 : 0;
-    setPercentage(calculatedPercentage);
-  }, [raised, goal]);
+  // Pure derivation from props — no effect/state needed.
+  const percentage = goal > 0 ? (raised / goal) * 100 : 0;
 
   return (
     <div className="space-y-2">

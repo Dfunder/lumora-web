@@ -136,7 +136,7 @@ api.interceptors.response.use(
         // No refresh token at all → force logout.
         isRefreshing = false;
         processQueue(error, null);
-        useAuthStore.getState().clearAuth();
+        useAuthStore.getState().resetAuth();
         useAuthStore.getState().openReauthModal();
         toast.error("Your session has expired. Please reconnect your wallet.", {
           id: "session-expired",
@@ -180,7 +180,7 @@ api.interceptors.response.use(
         // Refresh failed — clean up and send user to re-auth.
         isRefreshing = false;
         processQueue(refreshError, null);
-        useAuthStore.getState().clearAuth();
+        useAuthStore.getState().resetAuth();
         useAuthStore.getState().openReauthModal();
         toast.error("Your session has expired. Please reconnect your wallet.", {
           id: "session-expired",
@@ -247,7 +247,7 @@ export async function getAuthChallenge(
       address,
     });
     return res.data;
-  } catch (err) {
+  } catch {
     throw new Error(
       "Could not start wallet authentication. Please check your connection and try again.",
     );

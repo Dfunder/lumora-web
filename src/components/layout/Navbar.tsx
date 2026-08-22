@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { useWalletStore } from '@/stores/walletStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useWalletStore, useWalletSession } from '@/stores/walletStore';
 import { walletErrorSourceLabel } from '@/lib/walletErrors';
 
 export function Navbar() {
@@ -14,41 +13,52 @@ export function Navbar() {
   const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
-    address: walletAddress,
     connectWallet,
     disconnectWallet,
     step,
     walletError,
     walletErrorSource,
-    isDemoSession,
   } = useWalletStore();
-  // The authenticated session is the source of truth for "connected" so the
-  // navbar stays consistent with the real auth state — including after a page
-  // refresh, where the wallet store resets but the auth session is restored.
-  const { isAuthenticated, user } = useAuthStore();
-  const isConnected = isAuthenticated;
-  const address = walletAddress ?? user?.walletAddress ?? null;
+  // Single derived view of the wallet session (auth is the source of truth for
+  // "connected", and the restored session's walletAddress is picked up after a
+  // reload), so the navbar never re-derives these booleans locally.
+  const { isConnected, address, isDemoSession } = useWalletSession();
 
-  useEffect(() => {
-    if (isConnected && address) {
-      fetch(`https://horizon.stellar.org/accounts/${address}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data) {
-            const native = data.balances?.find((b: any) => b.asset_type === 'native');
-            if (native) {
-              setXlmBalance(native.balance);
-            } else {
-              setXlmBalance('0');
-            }
-          } else {
-            setXlmBalance('0');
-          }
-        })
-        .catch(console.error);
-    } else {
+  // Clear any stale balance as soon as the connection/address changes, using
+  // the render-phase adjustment pattern (no setState directly in an effect).
+  const [prevSession, setPrevSession] = useState<{
+    isConnected: boolean;
+    address: string | null;
+  }>({ isConnected, address });
+  if (
+    prevSession.isConnected !== isConnected ||
+    prevSession.address !== address
+  ) {
+    setPrevSession({ isConnected, address });
+    if (!isConnected || !address) {
       setXlmBalance(null);
     }
+  }
+
+  useEffect(() => {
+    if (!isConnected || !address) return;
+
+    let cancelled = false;
+    fetch(`https://horizon.stellar.org/accounts/${address}`)
+      .then(res => res.ok ? res.json() : null)
+      .then((data: { balances?: Array<{ asset_type?: string; balance?: string }> } | null) => {
+        if (cancelled) return;
+        if (data) {
+          const native = data.balances?.find((b) => b.asset_type === 'native');
+          setXlmBalance(native?.balance ?? '0');
+        } else {
+          setXlmBalance('0');
+        }
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
   }, [isConnected, address]);
 
   useEffect(() => {

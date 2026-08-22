@@ -1,5 +1,22 @@
 export type CategorySlug = 'education' | 'health' | 'environment' | 'disaster-relief' | 'animal-welfare' | 'general';
 
+export const CATEGORY_SLUGS: readonly CategorySlug[] = [
+  'education',
+  'health',
+  'environment',
+  'disaster-relief',
+  'animal-welfare',
+  'general',
+];
+
+/**
+ * Type guard for values read from URL search params or user input. Unknown
+ * slugs (typos, stale links) are dropped instead of being sent to the API.
+ */
+export function isCategorySlug(value: string | null | undefined): value is CategorySlug {
+  return typeof value === 'string' && (CATEGORY_SLUGS as readonly string[]).includes(value);
+}
+
 export interface CategoryInfo {
   name: string;
   description: string;

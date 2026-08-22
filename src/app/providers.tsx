@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { initSentry } from "@/lib/sentry";
 import { useAuthStore } from "@/stores/authStore";
-import { useWalletStore } from "@/stores/walletStore";
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -46,25 +45,14 @@ export function AppProviders({ children }: AppProvidersProps) {
         .some((c) => c.startsWith("lumora_auth=true"));
       if (!hasCookie) {
         // Another tab or server-side cleared the cookie — sync state.
-        auth.clearAuth();
+        auth.resetAuth();
       }
     }
   }, []);
 
-  // Reconcile the wallet store with a restored auth session. The auth session
-  // persists across reloads but the wallet store starts empty, so without this
-  // the navbar/UI could show a stale or mismatched wallet state after refresh.
-  useEffect(() => {
-    const auth = useAuthStore.getState();
-    const wallet = useWalletStore.getState();
-    if (
-      auth.isAuthenticated &&
-      auth.user?.walletAddress &&
-      !wallet.isConnected
-    ) {
-      wallet.setConnectionState(true, auth.user.walletAddress);
-    }
-  }, []);
+  // No explicit wallet reconciliation is needed here: the wallet session is
+  // derived from the auth store (see useWalletSession), so a restored session's
+  // walletAddress is picked up automatically after a reload.
 
   return (
     <QueryClientProvider client={queryClient}>
