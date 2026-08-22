@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import api from '@/lib/api';
@@ -9,31 +9,10 @@ import { queryKeys } from '@/lib/queryKeys';
 import { CampaignCard, CampaignCardSkeleton } from '@/components/campaigns/CampaignCard';
 import type { Campaign } from '@/types/campaign';
 import { getCategoryInfo } from '@/lib/categories';
+import { normalizeCampaigns } from '@/lib/campaigns';
 
 const PAGE_SIZE = 12;
 
-// Helper to map API campaign data to our type
-function mapApiCampaignToType(apiCampaign: any): Campaign {
-  return {
-    id: apiCampaign.id,
-    title: apiCampaign.title,
-    description: apiCampaign.description,
-    coverImage: apiCampaign.coverImage || apiCampaign.image,
-    goalAmount: apiCampaign.goalAmount || apiCampaign.goal,
-    raisedAmount: apiCampaign.raisedAmount || apiCampaign.raised,
-    currency: apiCampaign.currency || '$',
-    endDate: apiCampaign.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    donorCount: apiCampaign.donorCount,
-    creatorAddress: apiCampaign.creatorAddress || apiCampaign.creator?.address || '',
-    creatorName: apiCampaign.creatorName || apiCampaign.creator?.name || '',
-    isVerified: apiCampaign.isVerified || false,
-    category: apiCampaign.category || 'general',
-    status: apiCampaign.status,
-    createdAt: apiCampaign.createdAt,
-  };
-}
-
- 
 export default function CategoryPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const categoryInfo = getCategoryInfo(slug);
@@ -49,23 +28,25 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
         params: { page, limit: PAGE_SIZE, status: 'active', category: slug },
       });
 
-      const apiCampaigns = res.data.data as any[];
-      const mappedCampaigns = apiCampaigns.map(mapApiCampaignToType);
-      return { data: mappedCampaigns, total: res.data.total };
+      return { data: normalizeCampaigns(res.data.data), total: res.data.total };
     },
     retry: 1,
     staleTime: 30_000,
   });
 
-  useEffect(() => {
-    if (!data) {
-      return;
-    }
-
+  // Accumulate fetched pages via the render-phase state adjustment pattern
+  // (instead of setState inside an effect) so pagination stays consistent
+  // across filter changes and navigation.
+  const [seenData, setSeenData] = useState<{
+    data: NonNullable<typeof data> | null;
+    page: number;
+  }>({ data: null, page: 1 });
+  if (data && (seenData.data !== data || seenData.page !== page)) {
+    setSeenData({ data, page });
     setCampaigns((prev) => (page === 1 ? data.data : [...prev, ...data.data]));
     setTotal(data.total);
     setHasMore(page * PAGE_SIZE < data.total);
-  }, [data, page]);
+  }
 
   const totalLabel = useMemo(() => {
     if (total === 0) {

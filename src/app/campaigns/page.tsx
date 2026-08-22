@@ -1,87 +1,55 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
 import api from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { CampaignCard, CampaignCardSkeleton } from '@/components/campaigns/CampaignCard';
 import type { Campaign } from '@/types/campaign';
 import { normalizeCampaigns } from '@/lib/campaigns';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useCampaignFilters } from '@/hooks/useCampaignFilters';
 import { CATEGORY_LIST } from '@/lib/categories';
+import {
+  buildCampaignListQuery,
+  CAMPAIGN_SORT_OPTIONS,
+} from '@/lib/campaignFilters';
 
 const PAGE_SIZE = 12;
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'most-funded', label: 'Most Funded' },
-  { value: 'ending-soon', label: 'Ending Soon' },
-  { value: 'most-donors', label: 'Most Donors' },
-];
-
 function CampaignsContent() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const {
+    search: activeSearch,
+    searchInput,
+    setSearchInput,
+    debouncedSearch,
+    categories: selectedCategories,
+    sort: selectedSort,
+    page,
+    toggleCategory,
+    setSort,
+    setPage,
+    clearFilters,
+    isFiltering,
+  } = useCampaignFilters();
 
-  // Read initial state from URL
-  const initialSearch = searchParams.get('search') || '';
-  const initialCategories = searchParams.getAll('category');
-  const initialSort = searchParams.get('sort') || 'newest';
-
-  // Local state for UI
-  const [searchInput, setSearchInput] = useState(initialSearch);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories);
-  const [selectedSort, setSelectedSort] = useState(initialSort);
-  const [page, setPage] = useState(1);
-
-  // Debounce search input
-  const debouncedSearch = useDebounce(searchInput, 300);
-
-  // Sync state to URL
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    
-    if (debouncedSearch) {
-      params.set('search', debouncedSearch);
-    } else {
-      params.delete('search');
-    }
-
-    params.delete('category');
-    selectedCategories.forEach(cat => params.append('category', cat));
-
-    if (selectedSort !== 'newest') {
-      params.set('sort', selectedSort);
-    } else {
-      params.delete('sort');
-    }
-
-    const newQueryString = params.toString();
-    // Only push if changed
-    if (newQueryString !== searchParams.toString()) {
-      router.push(`${pathname}?${newQueryString}`, { scroll: false });
-      // Reset page on filter change
-      setPage(1);
-    }
-  }, [debouncedSearch, selectedCategories, selectedSort, pathname, router, searchParams]);
-
-  // Data fetching state
+  // Accumulated results across loaded pages so "Load More" appends.
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
 
-  const queryParams = {
-    page,
-    limit: PAGE_SIZE,
-    status: 'active',
-    search: debouncedSearch || undefined,
-    category: selectedCategories.length > 0 ? selectedCategories : undefined,
-    sort: selectedSort,
-  };
+  // The same params object drives both the API request and the query key, so
+  // the cache can never disagree with what was fetched.
+  const queryParams = buildCampaignListQuery(
+    {
+      search: activeSearch,
+      categories: selectedCategories,
+      sort: selectedSort,
+      page,
+    },
+    { limit: PAGE_SIZE },
+  );
 
   const { data, isLoading, isFetching, isError, error } = useQuery({
     queryKey: queryKeys.campaigns.list(queryParams),
@@ -96,34 +64,26 @@ function CampaignsContent() {
     staleTime: 30_000,
   });
 
-  useEffect(() => {
-    if (!data) return;
-
+  // Accumulate fetched pages via the render-phase state adjustment pattern
+  // (instead of setState inside an effect) so pagination can never produce
+  // stale or duplicated entries across filter changes and navigation.
+  const [seenData, setSeenData] = useState<{
+    data: NonNullable<typeof data> | null;
+    page: number;
+  }>({ data: null, page: 1 });
+  if (data && (seenData.data !== data || seenData.page !== page)) {
+    setSeenData({ data, page });
     setCampaigns((prev) => (page === 1 ? data.data : [...prev, ...data.data]));
     setTotal(data.total);
     setHasMore(page * PAGE_SIZE < data.total);
-  }, [data, page]);
+  }
 
-  const totalLabel = useMemo(() => {
-    if (total === 0) return 'No active campaigns found';
-    return `Showing ${Math.min(campaigns.length, total)} of ${total} active campaigns`;
-  }, [campaigns.length, total]);
+  const totalLabel =
+    total === 0
+      ? 'No active campaigns found'
+      : `Showing ${Math.min(campaigns.length, total)} of ${total} active campaigns`;
 
-  const handleLoadMore = () => setPage((current) => current + 1);
-
-  const handleCategoryToggle = (slug: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(slug) ? prev.filter(c => c !== slug) : [...prev, slug]
-    );
-  };
-
-  const clearFilters = () => {
-    setSearchInput('');
-    setSelectedCategories([]);
-    setSelectedSort('newest');
-  };
-
-  const isFiltering = debouncedSearch !== '' || selectedCategories.length > 0 || selectedSort !== 'newest';
+  const handleLoadMore = () => setPage(page + 1);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -158,10 +118,10 @@ function CampaignsContent() {
           <div className="sm:w-48">
             <select
               value={selectedSort}
-              onChange={(e) => setSelectedSort(e.target.value)}
+              onChange={(e) => setSort(e.target.value as typeof selectedSort)}
               className="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-11 border px-3 outline-none bg-white"
             >
-              {SORT_OPTIONS.map(opt => (
+              {CAMPAIGN_SORT_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
@@ -177,7 +137,7 @@ function CampaignsContent() {
               return (
                 <button
                   key={category.slug}
-                  onClick={() => handleCategoryToggle(category.slug)}
+                  onClick={() => toggleCategory(category.slug)}
                   className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                     isSelected 
                       ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' 
