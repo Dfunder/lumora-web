@@ -25,6 +25,15 @@ type QueueItem = {
 // Axios instance
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Axios instance
+// ---------------------------------------------------------------------------
+
+/**
+ * Shared API Client configured with the backend Base URL.
+ * Automatically handles JWT injection via request interceptors and
+ * handles automatic token refresh rotation with re-auth queueing upon receiving 401s.
+ */
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   headers: { "Content-Type": "application/json" },
@@ -43,9 +52,28 @@ api.interceptors.request.use((config) => {
 // Refresh-token rotation helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Expected backend behavior for `/auth/refresh` used by the response interceptor:
+ *
+ * - Endpoint: POST /auth/refresh
+ * - Request: { refreshToken: string }
+ * - Response (200): { accessToken: string, refreshToken?: string }
+ *
+ * Notes:
+ * - The backend MUST rotate refresh tokens: each successful refresh returns a new
+ *   refresh token and invalidates the previous one. The client calls
+ *   `applyRefreshRotation(newRefresh)` to detect reuse.
+ * - If a rotated (blacklisted) token is presented the backend should return 401
+ *   and treat this as a theft/reuse event (force logout and token invalidation).
+ */
+
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
+/**
+ * Processes the queue of pending requests that failed with 401 during token refresh.
+ * Re-runs them with the new access token if refresh succeeded, or rejects them if failed.
+ */
 function processQueue(error: unknown, token: string | null = null) {
   const pending = [...failedQueue];
   failedQueue = [];
@@ -58,19 +86,36 @@ function processQueue(error: unknown, token: string | null = null) {
   });
 }
 
-/** Called after a successful wallet re-auth completes. */
+/** 
+ * Called after a successful wallet re-auth completes.
+ * Resolves all queued requests with the new access token.
+ */
 export function resolveReauthQueue(token: string) {
   isRefreshing = false;
   processQueue(null, token);
 }
 
-/** Called when re-auth fails so queued requests are rejected. */
+/** 
+ * Called when re-auth fails so queued requests are rejected.
+ * Rejects all pending requests in the queue.
+ */
 export function rejectReauthQueue(
   error: unknown = new Error("Re-authentication failed"),
 ) {
   isRefreshing = false;
   processQueue(error, null);
 }
+
+/**
+ * Response-interceptor behavior and deduplication summary:
+ *
+ * - When a request receives a 401 the interceptor attempts a single refresh
+ *   flow. Concurrent requests that also receive 401 are queued until the
+ *   refresh completes.
+ * - If refresh succeeds the new access token is injected and queued requests
+ *   are retried. If refresh fails the queued requests are rejected and the
+ *   app opens the re-auth modal via `useAuthStore.getState().openReauthModal()`.
+ */
 
 // Friendly messages for known status codes.
 function friendlyMessage(status: number): string {
@@ -223,14 +268,20 @@ api.interceptors.response.use(
 // Public helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Expected response structure from the challenge generation endpoint.
+ */
 export type ChallengeResponse = {
-  challenge: string;
-  expiresAt: string;
+  challenge: string; // The random cryptographic challenge string (nonce)
+  expiresAt: string; // ISO timestamp when the challenge expires (typically 5 mins)
 };
 
+/**
+ * Expected response structure from the signature verification endpoint.
+ */
 export type VerifyResponse = {
-  accessToken: string;
-  refreshToken?: string;
+  accessToken: string; // JWT access token used in Authorization headers
+  refreshToken?: string; // JWT refresh token used for token rotation
   user: {
     id: string;
     email: string;
@@ -239,6 +290,14 @@ export type VerifyResponse = {
   };
 };
 
+/**
+ * Initiates the wallet authentication flow by requesting a cryptographic challenge
+ * from the backend for the given Stellar public key.
+ * 
+ * Endpoint: POST /auth/challenge
+ * Request Payload: { address: string }
+ * Response: ChallengeResponse
+ */
 export async function getAuthChallenge(
   address: string,
 ): Promise<ChallengeResponse> {
@@ -254,6 +313,27 @@ export async function getAuthChallenge(
   }
 }
 
+/**
+ * Example curl request for challenge generation:
+ *
+ * curl -X POST "$NEXT_PUBLIC_API_URL/auth/challenge" -H "Content-Type: application/json" \
+ *  -d '{"address":"G..."}'
+ *
+ * Expected success response:
+ * {
+ *   "challenge": "Sign this random challenge to log in: ...",
+ *   "expiresAt": "2026-08-21T14:05:00.000Z"
+ * }
+ */
+
+/**
+ * Verifies the signed cryptographic challenge against the user's public address on the backend.
+ * Returns the access token, refresh token, and user session details.
+ * 
+ * Endpoint: POST /auth/verify
+ * Request Payload: { address: string, signature: string }
+ * Response: VerifyResponse
+ */
 export async function verifyWalletSignature(
   address: string,
   signature: string,
@@ -275,6 +355,20 @@ export async function verifyWalletSignature(
     );
   }
 }
+
+/**
+ * Example curl request to verify a signature:
+ *
+ * curl -X POST "$NEXT_PUBLIC_API_URL/auth/verify" -H "Content-Type: application/json" \
+ *  -d '{"address":"G...","signature":"base64-signature"}'
+ *
+ * Expected success response:
+ * {
+ *   "accessToken": "eyJ...",
+ *   "refreshToken": "eyJ...",
+ *   "user": { "id":"usr-123","walletAddress":"G..." }
+ * }
+ */
 
 export async function getCampaignShares(campaignId: string): Promise<number> {
   try {

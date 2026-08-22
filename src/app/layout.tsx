@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Global metadata setup for SEO compliance.
+ * Implements title, descriptions, openGraph, and twitter card tags.
+ */
 export const metadata: Metadata = {
   title: "Lumora - Decentralized Fundraising Platform",
   description: "Democratizing fundraising through blockchain technology. Create, fund, and manage campaigns with complete transparency and trust.",
@@ -34,6 +38,16 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Root Layout of Lumora Application.
+ * 
+ * Component Hierarchy:
+ * 1. AppProviders: Injects React Query Client, Zustand stores, and context wrappers.
+ * 2. Navbar: Displays sticky top navigation bar and connects/disconnects wallet.
+ * 3. main / children: Renders the active subpage.
+ * 4. Footer: Bottom information.
+ * 5. ReAuthModal: Triggers a signature re-auth challenge popup when refresh tokens rotate/expire.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

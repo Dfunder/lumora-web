@@ -57,7 +57,7 @@ export default function ReviewAndDeployPage() {
     isVerified: false,
     category: creationData.category || "general",
     status: "active",
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-08-21T12:00:00.000Z",
   };
 
   // Handle terms checkbox change

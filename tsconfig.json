@@ -1,10 +1,12 @@
 {
+  // Lumora Web TSConfig: Specifies compiler options, strict type safety,
+  // path resolution aliases (@/* -> src/*), and integration with Next.js type compiler.
   "compilerOptions": {
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": true, // Enforces strict null checks and type safety to prevent runtime errors
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -19,6 +21,7 @@
       }
     ],
     "paths": {
+      // Path resolution mapping for simplified local imports
       "@/*": ["./src/*"]
     }
   },
