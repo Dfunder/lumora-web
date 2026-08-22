@@ -5,6 +5,31 @@ import TrustAndHowItWorksSection from '@/components/landing/TrustAndHowItWorksSe
 import Link from 'next/link';
 
 export default function Home() {
+  const {
+    status,
+    address,
+    selectedWallet,
+    wallets,
+    error,
+    isConnecting,
+    isConnected,
+    hasError,
+    isRejected,
+    connect,
+  } = useWalletConnection();
+
+  const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    if (isRejected) {
+      setShowError(true);
+    }
+  }, [isRejected]);
+
+  const handleConnect = async (walletId: string) => {
+    await connect(walletId);
+  };
+
   return (
     <div className="bg-white">
       <HeroSection />
