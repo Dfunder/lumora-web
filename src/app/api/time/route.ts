@@ -1,0 +1,11 @@
+import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+
+/** Returns the authoritative server time so clients can correct their clock. */
+export async function GET() {
+  return NextResponse.json(
+    { serverTime: Date.now() },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}

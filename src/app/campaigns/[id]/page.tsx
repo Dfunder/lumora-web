@@ -8,6 +8,8 @@ import Updates from "@/components/campaigns/Updates";
 import ContractInfo from "@/components/campaigns/ContractInfo";
 import { ShareButtons } from "@/components/campaigns/ShareButtons";
 import { RelatedCampaigns } from "@/components/campaigns/RelatedCampaigns";
+import { Countdown } from "@/components/campaigns/Countdown";
+import { DonationWidget } from "@/components/campaigns/DonationWidget";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -60,6 +62,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
     goal: 10000,
     category: "education",
     shareCount: 12,
+    endDate: "2027-01-01T00:00:00.000Z",
     about:
       "This is the about section of the campaign. It contains detailed information about the project and its goals.",
     milestones: [
@@ -204,9 +207,8 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               <h2 className="text-xl font-semibold mb-4">Funding Progress</h2>
               <Progress raised={campaign.raised} goal={campaign.goal} />
             </div>
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors">
-              Donate Now
-            </button>
+            <Countdown endDate={campaign.endDate} />
+            <DonationWidget campaignId={campaign.id} />
             <ShareButtons
               campaignId={campaign.id}
               title={campaign.title}
