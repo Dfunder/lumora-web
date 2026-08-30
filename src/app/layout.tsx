@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ReAuthModal } from "@/components/ReAuthModal";
 import "./globals.css";
+import { WalletProvider } from "../contexts/WalletContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
